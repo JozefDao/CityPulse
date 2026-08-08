@@ -1,0 +1,283 @@
+// Prisma schema for CityPulse (MySQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum SnapshotType {
+  CURRENT
+  HOURLY
+  DAILY
+  AIR_QUALITY
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum ArticleModerationStatus {
+  CLEAN
+  EXPLICIT
+  BLOCKED
+}
+
+enum ModerationSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum AlertMetric {
+  TEMPERATURE
+  WIND_SPEED
+  HUMIDITY
+  PRECIPITATION
+  PM25
+  PM10
+}
+
+enum AlertOperator {
+  GT
+  GTE
+  LT
+  LTE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  nickname     String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  avatarUrl    String?  @db.Text
+  bio          String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens   RefreshToken[]
+  userCities      UserCity[]
+  articles        Article[]
+  articleLikes    ArticleLike[]
+  comments        ArticleComment[]
+  supportRequests SupportRequest[]
+  moderationLogs  ModerationAuditLog[]
+  alertRules      AlertRule[]
+  alertEvents     AlertEvent[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model City {
+  id          String   @id @default(cuid())
+  name        String
+  countryCode String?
+  lat         Float
+  lon         Float
+  timezone    String
+  createdAt   DateTime @default(now())
+
+  userCities  UserCity[]
+  snapshots   WeatherSnapshot[]
+  alertRules  AlertRule[]
+  alertEvents AlertEvent[]
+}
+
+model UserCity {
+  userId    String
+  cityId    String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  city City @relation(fields: [cityId], references: [id])
+
+  @@id([userId, cityId])
+  @@index([cityId])
+  @@index([userId, sortOrder])
+}
+
+model WeatherSnapshot {
+  id          String       @id @default(cuid())
+  cityId      String
+  type        SnapshotType
+  payloadJson Json
+  fetchedAt   DateTime
+
+  city City @relation(fields: [cityId], references: [id])
+
+  @@index([cityId, type, fetchedAt])
+}
+
+model JobLease {
+  name      String    @id @db.VarChar(64)
+  token     String?   @db.VarChar(64)
+  expiresAt DateTime?
+}
+
+model AlertRule {
+  id                  String        @id @default(cuid())
+  userId              String
+  cityId              String
+  metric              AlertMetric
+  operator            AlertOperator
+  threshold           Float
+  isActive            Boolean       @default(true)
+  lastConditionMet    Boolean       @default(false)
+  lastEvaluationValue Float?
+  lastEvaluatedAt     DateTime?
+  lastTriggeredAt     DateTime?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city   City         @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  events AlertEvent[]
+
+  @@index([userId, createdAt])
+  @@index([cityId, isActive])
+}
+
+model AlertEvent {
+  id          String        @id @default(cuid())
+  ruleId       String
+  userId       String
+  cityId       String
+  metric       AlertMetric
+  operator     AlertOperator
+  threshold    Float
+  observedValue Float
+  message      String
+  isRead       Boolean      @default(false)
+  readAt       DateTime?
+  createdAt    DateTime     @default(now())
+
+  rule AlertRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city City      @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@index([ruleId, createdAt])
+  @@index([cityId, createdAt])
+}
+
+model Article {
+  id               String                  @id @default(cuid())
+  authorId         String
+  title            String
+  slug             String                  @unique
+  summary          String                  @db.Text
+  markdown         String                  @db.LongText
+  status           ArticleStatus           @default(DRAFT)
+  isFlagged        Boolean                 @default(false)
+  flagCategory     String?
+  flagSeverity     ModerationSeverity?
+  flagReason       String?
+  moderationStatus ArticleModerationStatus @default(CLEAN)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @default(now()) @updatedAt
+  publishedAt      DateTime?
+
+  author   User             @relation(fields: [authorId], references: [id])
+  likes    ArticleLike[]
+  comments ArticleComment[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([isFlagged])
+  @@index([flagSeverity])
+  @@index([moderationStatus])
+}
+
+model ArticleLike {
+  id        String   @id @default(cuid())
+  articleId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, userId])
+  @@index([userId])
+}
+
+model ArticleComment {
+  id           String             @id @default(cuid())
+  articleId    String
+  userId       String
+  body         String
+  isFlagged    Boolean            @default(false)
+  flagCategory String?
+  flagSeverity ModerationSeverity?
+  flagReason   String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  deletedAt    DateTime?
+
+  article        Article              @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moderationLogs ModerationAuditLog[]
+
+  @@index([articleId, createdAt])
+  @@index([userId])
+  @@index([deletedAt])
+  @@index([isFlagged])
+  @@index([flagSeverity])
+}
+
+model ModerationAuditLog {
+  id                String             @id @default(cuid())
+  commentId         String
+  adminId           String
+  action            String
+  previousIsFlagged Boolean
+  nextIsFlagged     Boolean
+  previousCategory  String?
+  nextCategory      String?
+  previousSeverity  ModerationSeverity?
+  nextSeverity      ModerationSeverity?
+  previousReason    String?
+  nextReason        String?
+  note              String?
+  createdAt         DateTime           @default(now())
+
+  comment ArticleComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  admin   User           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([commentId, createdAt])
+  @@index([adminId, createdAt])
+}
+
+model SupportRequest {
+  id        String   @id @default(cuid())
+  senderId  String
+  subject   String
+  message   String   @db.Text
+  createdAt DateTime @default(now())
+
+  sender User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, createdAt])
+}

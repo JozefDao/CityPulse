@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 35% 97%;
+  --foreground: 210 46% 13%;
+  --card: 0 0% 100%;
+  --card-foreground: 210 46% 13%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 210 46% 13%;
+  --muted: 210 30% 93%;
+  --muted-foreground: 212 23% 36%;
+  --border: 210 25% 85%;
+  --input: 210 25% 84%;
+  --primary: 201 90% 36%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 187 45% 90%;
+  --secondary-foreground: 196 70% 20%;
+  --accent: 45 95% 92%;
+  --accent-foreground: 30 85% 24%;
+  --destructive: 0 84% 58%;
+  --destructive-foreground: 210 40% 98%;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased;
+    background-image:
+      radial-gradient(1200px 500px at 20% -10%, rgba(17, 148, 186, 0.18), transparent 65%),
+      radial-gradient(900px 400px at 80% -20%, rgba(245, 180, 60, 0.2), transparent 60%);
+  }
+
+  a {
+    @apply text-inherit;
+  }
+
+  input,
+  textarea,
+  select {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+@layer components {
+  .app-container {
+    @apply mx-auto w-full max-w-7xl px-4 pb-10 pt-5 md:px-6;
+  }
+}
+
+

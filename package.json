@@ -1,0 +1,15 @@
+{
+  "name": "citypulse",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "bootstrap:local": "node ./scripts/local-bootstrap.mjs",
+    "db:up": "docker compose up -d mysql",
+    "db:down": "docker compose down",
+    "dev": "node ./scripts/local-dev.mjs",
+    "dev:jobs": "node ./scripts/dev-scheduler.mjs"
+  }
+}
