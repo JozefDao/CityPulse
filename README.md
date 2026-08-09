@@ -8,6 +8,10 @@ It combines three product areas in one app:
 - alert rules and notifications
 - guide articles with comments, favorites, moderation, and admin tools
 
+## Live Demo
+
+https://city-pulse-frontend-phi.vercel.app
+
 ## Stack
 
 ### Backend
