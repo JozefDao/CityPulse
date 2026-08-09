@@ -56,11 +56,22 @@ async function bootstrap() {
     )
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+
+  const swaggerCdn =
+    'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui';
+
+  SwaggerModule.setup('api/docs', app, document, {
+    customCssUrl: `${swaggerCdn}.css`,
+    customJs: [
+      `${swaggerCdn}-bundle.js`,
+      `${swaggerCdn}-standalone-preset.js`,
+    ],
+  });
 
   const port = Number(process.env.PORT ?? 3000);
   await app.listen(port);
+
   console.log(`CityPulse API running on http://localhost:${port}/api/docs`);
-}
+  }
 
 void bootstrap();
